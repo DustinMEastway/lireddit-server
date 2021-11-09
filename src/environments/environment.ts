@@ -1,7 +1,8 @@
 export const environment = {
-  prod: false,
   database: {
     name: 'lireddit',
     type: 'postgresql'
-  }
+  },
+  port: 4000,
+  prod: false
 } as const;
