@@ -5,7 +5,8 @@ import { buildSchema } from 'type-graphql';
 
 import { environment } from './environments';
 import { default as mikroOrmConfig }  from './mikro-orm.config';
-import { HelloResolver } from './resolvers';
+import { graphQlResolvers } from './resolvers';
+import { AppContext } from './types';
 
 async function main(): Promise<void> {
   const orm = await MikroORM.init(mikroOrmConfig);
@@ -13,9 +14,13 @@ async function main(): Promise<void> {
   await orm.getMigrator().up();
 
   const app = express();
+
   const apolloServer = new ApolloServer({
+    context: (): AppContext => ({
+      em: orm.em
+    }),
     schema: await buildSchema({
-      resolvers: [ HelloResolver ],
+      resolvers: graphQlResolvers,
       validate: false
     })
   });
