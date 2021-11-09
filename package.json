@@ -1,0 +1,27 @@
+{
+  "name": "lireddit-server",
+  "version": "0.0.0",
+  "description": "Fullstack tutorial",
+  "scripts": {
+    "create-migration": "npx mikro-orm migration:create -p src/migrations",
+    "start": "tsc -w & nodemon dist/index.js"
+  },
+  "author": "Dustin M. Eastway",
+  "devDependencies": {
+    "@types/node": "^16.11.6",
+    "nodemon": "^2.0.14",
+    "typescript": "^4.4.4"
+  },
+  "dependencies": {
+    "@mikro-orm/cli": "^4.5.9",
+    "@mikro-orm/core": "^4.5.9",
+    "@mikro-orm/migrations": "^4.5.9",
+    "@mikro-orm/postgresql": "^4.5.9",
+    "pg": "^8.7.1"
+  },
+  "mikro-orm": {
+    "configPaths": [
+      "./dist/mikro-orm.config.js"
+    ]
+  }
+}
