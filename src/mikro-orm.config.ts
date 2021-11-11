@@ -1,7 +1,7 @@
 import { MikroORM } from '@mikro-orm/core';
 import { default as path } from 'path';
 
-import { Post } from './entities';
+import { entities } from './entities';
 import { environment } from './environments';
 
 const db = environment.database;
@@ -9,7 +9,7 @@ const db = environment.database;
 export default {
   dbName: db.name,
   debug: !environment.prod,
-  entities: [ Post ],
+  entities,
   migrations: {
     path: path.join(__dirname, './migrations'),
     pattern: /^[\w-]+\d+\.[jt]s$/

@@ -1,5 +1,7 @@
 import { PostResolver } from './post';
+import { UserResolver } from './user';
 
-export const graphQlResolvers = [
-  PostResolver
+export const resolvers = [
+  PostResolver,
+  UserResolver
 ] as const;
