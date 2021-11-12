@@ -37,11 +37,11 @@ export class UserResolver {
   @Mutation(() => User)
   async userLogin(
     @Arg('options') options: UserCreateInput,
-    @Ctx() { em }: AppContext
+    @Ctx() { entityManager }: AppContext
   ): Promise<User> {
     options.validate();
     const { password, username } = options;
-    const existingUser = await em.findOne(User, { username });
+    const existingUser = await entityManager.findOne(User, { username });
     if (!existingUser || !await argon2.verify(existingUser.password, password)) {
       throw new FormControlError({
         errors: [ 'Invalid username or password.' ]
@@ -54,23 +54,23 @@ export class UserResolver {
   @Mutation(() => User)
   async userCreate(
     @Arg('options') options: UserCreateInput,
-    @Ctx() { em }: AppContext
+    @Ctx() { entityManager }: AppContext
   ): Promise<User> {
     options.validate();
     const { username, password } = options;
 
-    const existingUser = await em.findOne(User, { username });
+    const existingUser = await entityManager.findOne(User, { username });
     if (existingUser) {
       throw new FormControlError({
         children: { username: [ 'Username already exists.' ] }
       });
     }
 
-    const user = em.create(User, {
+    const user = entityManager.create(User, {
       password: await argon2.hash(password),
       username
     });
-    await em.persistAndFlush(user);
+    await entityManager.persistAndFlush(user);
     return user;
   }
 }

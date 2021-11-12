@@ -15,7 +15,7 @@ async function addGraphQlMiddleware(app: Express): Promise<void> {
 
   const apolloServer = new ApolloServer({
     context: (): AppContext => ({
-      em: orm.em
+      entityManager: orm.em
     }),
     schema: await buildSchema({
       resolvers,
