@@ -18,7 +18,7 @@ export function validateString(
     && [
       {
         message: () => `${controlKey} is required.`,
-        validator: () => required && !!value
+        validator: () => !required || !!value
       },
       {
         message: () => `${controlKey} must be at most ${maxLength} long`,
@@ -28,8 +28,8 @@ export function validateString(
         message: () => `${controlKey} must be at least ${minLength} long`,
         validator: () => minLength == null || !value || value.length >= minLength
       }
-    ].every(({ message, validator }) =>
-      addControlError(errors, controlKey, message(), !validator())
-    )
+    ].map(({ message, validator }) =>
+      addControlError(errors, controlKey, message(), validator())
+    ).every(v => v)
   );
 }
