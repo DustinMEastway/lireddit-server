@@ -7,12 +7,6 @@
     "start": "tsc -w & nodemon dist/index.js"
   },
   "author": "Dustin M. Eastway",
-  "devDependencies": {
-    "@types/express": "^4.17.13",
-    "@types/node": "^16.11.6",
-    "nodemon": "^2.0.14",
-    "typescript": "^4.4.4"
-  },
   "dependencies": {
     "@mikro-orm/cli": "^4.5.9",
     "@mikro-orm/core": "^4.5.9",
@@ -20,10 +14,22 @@
     "@mikro-orm/postgresql": "^4.5.9",
     "apollo-server-express": "^3.5.0",
     "argon2": "^0.28.2",
+    "connect-redis": "^6.0.0",
     "express": "^4.17.1",
+    "express-session": "^1.17.2",
     "graphql": "^15.7.2",
     "pg": "^8.7.1",
+    "redis": "^3.1.2",
     "type-graphql": "^1.1.1"
+  },
+  "devDependencies": {
+    "@types/connect-redis": "^0.0.17",
+    "@types/express": "^4.17.13",
+    "@types/express-session": "^1.17.4",
+    "@types/node": "^16.11.6",
+    "@types/redis": "^2.8.32",
+    "nodemon": "^2.0.14",
+    "typescript": "^4.4.4"
   },
   "mikro-orm": {
     "configPaths": [

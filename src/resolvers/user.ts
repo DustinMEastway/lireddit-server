@@ -1,43 +1,27 @@
 import { default as argon2 } from 'argon2';
-import { Arg, Ctx, Field, InputType, Mutation, Resolver } from 'type-graphql';
+import { Arg, Ctx, Mutation, Query, Resolver } from 'type-graphql';
 
 import { User } from '../entities';
-import { validateString } from '../functions';
 import { AppContext, FormControlError } from '../types';
-
-@InputType()
-export class UserCreateInput {
-  @Field()
-  password: string;
-  @Field()
-  username: string;
-
-  validate(): void {
-    const errors: Record<string, string[]> = {};
-    this.password = this.password.trim();
-    this.username = this.username.trim();
-
-    if ([
-      validateString(errors, 'password', this.password, {
-        minLength: 3,
-        required: true
-      }),
-      validateString(errors, 'username', this.username, {
-        minLength: 3,
-        required: true
-      })
-    ].some(v => !v)) {
-      throw new FormControlError({ children: errors });
-    }
-  }
-}
+import { UserInput } from './input-types';
 
 @Resolver()
 export class UserResolver {
+  @Query(() => User, { nullable: true })
+  async userDetails(
+    @Ctx() { entityManager, request }: AppContext
+  ): Promise<User | null> {
+    const userId = request.session.userId;
+
+    return (userId)
+      ? await entityManager.findOne(User, { id: userId })
+      : null;
+  }
+
   @Mutation(() => User)
   async userLogin(
-    @Arg('options') options: UserCreateInput,
-    @Ctx() { entityManager }: AppContext
+    @Arg('options') options: UserInput,
+    @Ctx() { entityManager, request }: AppContext
   ): Promise<User> {
     options.validate();
     const { password, username } = options;
@@ -48,13 +32,15 @@ export class UserResolver {
       });
     }
 
+    request.session.userId = existingUser.id;
+
     return existingUser;
   }
 
   @Mutation(() => User)
   async userCreate(
-    @Arg('options') options: UserCreateInput,
-    @Ctx() { entityManager }: AppContext
+    @Arg('options') options: UserInput,
+    @Ctx() { entityManager, request }: AppContext
   ): Promise<User> {
     options.validate();
     const { username, password } = options;
@@ -71,6 +57,9 @@ export class UserResolver {
       username
     });
     await entityManager.persistAndFlush(user);
+
+    request.session.userId = user.id;
+
     return user;
   }
 }

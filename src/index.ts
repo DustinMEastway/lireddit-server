@@ -1,6 +1,9 @@
 import { MikroORM } from '@mikro-orm/core';
 import { ApolloServer } from 'apollo-server-express';
+import { default as connectRedis } from 'connect-redis';
 import { default as express, Express } from 'express';
+import { default as expressSession } from 'express-session';
+import { default as redis } from 'redis';
 import { buildSchema } from 'type-graphql';
 
 import { environment } from './environments';
@@ -14,8 +17,10 @@ async function addGraphQlMiddleware(app: Express): Promise<void> {
   await orm.getMigrator().up();
 
   const apolloServer = new ApolloServer({
-    context: (): AppContext => ({
-      entityManager: orm.em
+    context: ({ req, res }): AppContext => ({
+      entityManager: orm.em,
+      request: req,
+      response: res
     }),
     schema: await buildSchema({
       resolvers,
@@ -26,8 +31,38 @@ async function addGraphQlMiddleware(app: Express): Promise<void> {
   apolloServer.applyMiddleware({ app });
 }
 
+async function addRedisSessionMiddleware(app: Express): Promise<void> {
+  const expressSessionSecret = process.env.EXPRESS_SESSION_SECRET;
+  if (typeof expressSessionSecret !== 'string' || !expressSessionSecret.trim()) {
+    throw new Error(`Environmental variable 'EXPRESS_SESSION_SECRET' is required.`);
+  }
+
+  const RedisStore = connectRedis(expressSession)
+  const dayInMilliseconds = 24 * 60 * 60 * 1000;
+
+  app.use(
+    expressSession({
+      name: 'qid',
+      cookie: {
+        httpOnly: true,
+        maxAge: 30 * dayInMilliseconds,
+        sameSite: 'lax',
+        secure: environment.prod
+      },
+      resave: false,
+      saveUninitialized: false,
+      secret: expressSessionSecret,
+      store: new RedisStore({
+        client: redis.createClient(),
+        disableTouch: true
+      })
+    })
+  );
+}
+
 async function main(): Promise<void> {
   const app = express();
+  await addRedisSessionMiddleware(app);
   await addGraphQlMiddleware(app);
 
   app.listen(environment.port, (): void => {
