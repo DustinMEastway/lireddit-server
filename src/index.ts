@@ -1,6 +1,7 @@
 import { MikroORM } from '@mikro-orm/core';
 import { ApolloServer } from 'apollo-server-express';
 import { default as connectRedis } from 'connect-redis';
+import { default as cors } from 'cors';
 import { default as express, Express } from 'express';
 import { default as expressSession } from 'express-session';
 import { default as redis } from 'redis';
@@ -18,7 +19,7 @@ async function addGraphQlMiddleware(app: Express): Promise<void> {
 
   const apolloServer = new ApolloServer({
     context: ({ req, res }): AppContext => ({
-      entityManager: orm.em,
+      entityManager: orm.em as AppContext['entityManager'],
       request: req,
       response: res
     }),
@@ -28,7 +29,7 @@ async function addGraphQlMiddleware(app: Express): Promise<void> {
     })
   });
   await apolloServer.start();
-  apolloServer.applyMiddleware({ app });
+  apolloServer.applyMiddleware({ app, cors: false });
 }
 
 async function addRedisSessionMiddleware(app: Express): Promise<void> {
@@ -62,6 +63,11 @@ async function addRedisSessionMiddleware(app: Express): Promise<void> {
 
 async function main(): Promise<void> {
   const app = express();
+
+  app.use(cors({
+    credentials: true,
+    origin: 'http://localhost:3000'
+  }))
   await addRedisSessionMiddleware(app);
   await addGraphQlMiddleware(app);
 

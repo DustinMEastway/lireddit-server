@@ -3,7 +3,7 @@ import { Arg, Ctx, Mutation, Query, Resolver } from 'type-graphql';
 
 import { User } from '../entities';
 import { AppContext, FormControlError } from '../types';
-import { UserInput } from './input-types';
+import { UserLoginInput } from './input-types';
 
 @Resolver()
 export class UserResolver {
@@ -20,11 +20,11 @@ export class UserResolver {
 
   @Mutation(() => User)
   async userLogin(
-    @Arg('options') options: UserInput,
+    @Arg('input') input: UserLoginInput,
     @Ctx() { entityManager, request }: AppContext
   ): Promise<User> {
-    options.validate();
-    const { password, username } = options;
+    input.validate();
+    const { password, username } = input;
     const existingUser = await entityManager.findOne(User, { username });
     if (!existingUser || !await argon2.verify(existingUser.password, password)) {
       throw new FormControlError({
@@ -39,11 +39,11 @@ export class UserResolver {
 
   @Mutation(() => User)
   async userCreate(
-    @Arg('options') options: UserInput,
+    @Arg('input') input: UserLoginInput,
     @Ctx() { entityManager, request }: AppContext
   ): Promise<User> {
-    options.validate();
-    const { username, password } = options;
+    input.validate();
+    const { username, password } = input;
 
     const existingUser = await entityManager.findOne(User, { username });
     if (existingUser) {

@@ -4,7 +4,7 @@ import { validateString } from '../../functions';
 import { FormControlError } from '../../types';
 
 @InputType()
-export class UserInput {
+export class UserLoginInput {
   @Field()
   password: string;
   @Field()
