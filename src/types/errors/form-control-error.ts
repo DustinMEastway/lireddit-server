@@ -3,12 +3,12 @@ import { BaseError } from './base-error';
 export type FormControlErrorMessages = string[];
 
 export interface FormGroupErrorMessages {
-  children?: Record<string, FormErrorMessages>;
+  children?: Record<string, FormControlErrorMessages>;
   errors?: FormControlErrorMessages;
 }
 
 export interface FormArrayErrorMessages {
-  children?: (FormErrorMessages | null)[];
+  children?: (FormControlErrorMessages | null)[];
   errors?: FormControlErrorMessages;
 }
 
@@ -17,7 +17,7 @@ export type FormErrorMessages = FormControlErrorMessages | FormGroupErrorMessage
 export class FormControlError extends BaseError {
   readonly name = 'FormControlError';
 
-  constructor(formErrors: FormErrorMessages, message?: string) {
-    super(message ?? 'Invalid values provided', 'FORM_CONTROL_ERROR', 422, formErrors);
+  constructor(formErrors: FormGroupErrorMessages, message?: string) {
+    super(message ?? 'Invalid values provided', 'FORM_CONTROL_ERROR', 422, { formControlError: formErrors });
   }
 }
