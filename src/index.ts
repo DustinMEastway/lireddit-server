@@ -43,7 +43,7 @@ async function addRedisSessionMiddleware(app: Express): Promise<void> {
 
   app.use(
     expressSession({
-      name: 'qid',
+      name: environment.cookieName,
       cookie: {
         httpOnly: true,
         maxAge: 30 * dayInMilliseconds,

@@ -1,6 +1,7 @@
 import { default as argon2 } from 'argon2';
 import { Arg, Ctx, Mutation, Query, Resolver } from 'type-graphql';
 
+import { environment } from '../environments';
 import { User } from '../entities';
 import { AppContext, FormControlError } from '../types';
 import { UserLoginInput } from './input-types';
@@ -35,6 +36,22 @@ export class UserResolver {
     request.session.userId = existingUser.id;
 
     return existingUser;
+  }
+
+  @Mutation(() => Boolean)
+  userLogout(
+    @Ctx() { request, response }: AppContext
+  ): Promise<boolean> {
+    return new Promise((resolve) => {
+      request.session.destroy((error) => {
+        response.clearCookie(environment.cookieName);
+        if (error) {
+          console.warn('error', error);
+        }
+
+        resolve(!error);
+      });
+    });
   }
 
   @Mutation(() => User)
