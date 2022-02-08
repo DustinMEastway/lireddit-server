@@ -4,7 +4,7 @@ import { default as connectRedis } from 'connect-redis';
 import { default as cors } from 'cors';
 import { default as express, Express } from 'express';
 import { default as expressSession } from 'express-session';
-import { default as redis } from 'redis';
+import IoRedis, { Redis } from 'ioredis';
 import { buildSchema } from 'type-graphql';
 
 import { environment } from './environments';
@@ -12,13 +12,17 @@ import { default as mikroOrmConfig }  from './mikro-orm.config';
 import { resolvers } from './resolvers';
 import { AppContext } from './types';
 
-async function addGraphQlMiddleware(app: Express): Promise<void> {
+async function addGraphQlMiddleware(
+  app: Express,
+  context: Omit<AppContext, 'entityManager' | 'request' | 'response'>
+): Promise<void> {
   const orm = await MikroORM.init(mikroOrmConfig);
   // run the migration scripts
   await orm.getMigrator().up();
 
   const apolloServer = new ApolloServer({
     context: ({ req, res }): AppContext => ({
+      ...context,
       entityManager: orm.em as AppContext['entityManager'],
       request: req,
       response: res
@@ -32,7 +36,7 @@ async function addGraphQlMiddleware(app: Express): Promise<void> {
   apolloServer.applyMiddleware({ app, cors: false });
 }
 
-async function addRedisSessionMiddleware(app: Express): Promise<void> {
+async function addRedisSessionMiddleware(app: Express): Promise<Redis> {
   const expressSessionSecret = process.env.EXPRESS_SESSION_SECRET;
   if (typeof expressSessionSecret !== 'string' || !expressSessionSecret.trim()) {
     throw new Error(`Environmental variable 'EXPRESS_SESSION_SECRET' is required.`);
@@ -40,6 +44,7 @@ async function addRedisSessionMiddleware(app: Express): Promise<void> {
 
   const RedisStore = connectRedis(expressSession)
   const dayInMilliseconds = 24 * 60 * 60 * 1000;
+  const client = new IoRedis();
 
   app.use(
     expressSession({
@@ -54,11 +59,13 @@ async function addRedisSessionMiddleware(app: Express): Promise<void> {
       saveUninitialized: false,
       secret: expressSessionSecret,
       store: new RedisStore({
-        client: redis.createClient(),
+        client,
         disableTouch: true
       })
     })
   );
+
+  return client;
 }
 
 async function main(): Promise<void> {
@@ -68,8 +75,8 @@ async function main(): Promise<void> {
     credentials: true,
     origin: 'http://localhost:3000'
   }))
-  await addRedisSessionMiddleware(app);
-  await addGraphQlMiddleware(app);
+  const redis = await addRedisSessionMiddleware(app);
+  await addGraphQlMiddleware(app, { redis });
 
   app.listen(environment.port, (): void => {
     console.log(`Server listening on localhost:${environment.port}`);

@@ -1,9 +1,11 @@
 import { default as argon2 } from 'argon2';
 import { Arg, Ctx, Mutation, Query, Resolver } from 'type-graphql';
+import { v4 } from 'uuid';
 
 import { environment } from '../environments';
 import { User } from '../entities';
-import { AppContext, FormControlError } from '../types';
+import { sendEmail, Time } from '../functions';
+import { AppContext, FormControlError, RedisKey } from '../types';
 import { UserCreateInput, UserLoginInput } from './input-types';
 
 @Resolver()
@@ -81,5 +83,32 @@ export class UserResolver {
     request.session.userId = user.id;
 
     return user;
+  }
+
+  @Mutation(() => Boolean)
+  async userRequestChangePassword(
+    @Arg('email') email: string,
+    @Ctx() { entityManager, redis }: AppContext
+  ): Promise<boolean> {
+    const user = await entityManager.findOne(User, { email });
+    if (!user) {
+      throw new FormControlError({
+        children: { email: [ 'Email does not exist.' ] }
+      });
+    }
+
+    const token = v4();
+    await redis.set(`${RedisKey}:${token}`, user.id, 'ex', Time.converters.fromDay(3));
+
+    await sendEmail({
+      from: 'lireddit@lireddit.com',
+      html: [
+        `<a href="http://localhost:3000/change-password/${token}">Change Password</a>`
+      ].join('\n'),
+      subject: 'Password Change Request',
+      to: email
+    });
+
+    return true;
   }
 }
