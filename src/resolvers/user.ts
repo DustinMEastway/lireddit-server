@@ -4,7 +4,7 @@ import { Arg, Ctx, Mutation, Query, Resolver } from 'type-graphql';
 import { environment } from '../environments';
 import { User } from '../entities';
 import { AppContext, FormControlError } from '../types';
-import { UserLoginInput } from './input-types';
+import { UserCreateInput, UserLoginInput } from './input-types';
 
 @Resolver()
 export class UserResolver {
@@ -26,7 +26,7 @@ export class UserResolver {
   ): Promise<User> {
     input.validate();
     const { password, username } = input;
-    const existingUser = await entityManager.findOne(User, { username });
+    const existingUser = await entityManager.findOne(User, { $or: [ { username }, { email: username } ] });
     if (!existingUser || !await argon2.verify(existingUser.password, password)) {
       throw new FormControlError({
         errors: [ 'Invalid username or password.' ]
@@ -56,13 +56,15 @@ export class UserResolver {
 
   @Mutation(() => User)
   async userCreate(
-    @Arg('input') input: UserLoginInput,
+    @Arg('input') input: UserCreateInput,
     @Ctx() { entityManager, request }: AppContext
   ): Promise<User> {
     input.validate();
-    const { username, password } = input;
+    const { email, password, username } = input;
 
-    const existingUser = await entityManager.findOne(User, { username });
+    const existingUser = await entityManager.findOne(User, {
+      $or: [ { username }, { email: username }, { email }, { username: email } ]
+    });
     if (existingUser) {
       throw new FormControlError({
         children: { username: [ 'Username already exists.' ] }
@@ -70,6 +72,7 @@ export class UserResolver {
     }
 
     const user = entityManager.create(User, {
+      email,
       password: await argon2.hash(password),
       username
     });

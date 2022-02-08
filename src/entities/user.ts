@@ -9,6 +9,10 @@ export class User {
   createdAt = new Date();
 
   @Field()
+  @Property({ type: 'text', unique: true })
+  email!: string;
+
+  @Field()
   @PrimaryKey()
   id!: number;
 
