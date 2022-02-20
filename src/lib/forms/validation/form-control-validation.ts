@@ -1,4 +1,4 @@
-import { FormValidator } from './form-validator';
+import { FormValidator } from '../validators';
 
 export interface FormControlValidation<T> {
   control?: {
