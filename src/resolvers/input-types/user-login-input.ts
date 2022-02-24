@@ -1,7 +1,8 @@
 import { Field, InputType } from 'type-graphql';
+import { FormError } from '../../lib/backend/errors';
+import { FormGroupErrorMessages } from '../../lib/forms';
 
 import { validateString } from '../../functions';
-import { FormControlError, FormGroupErrorMessages } from '../../types';
 
 @InputType()
 export class UserLoginInput {
@@ -16,11 +17,11 @@ export class UserLoginInput {
     const errors = this.validateInner();
 
     if (errors) {
-      throw new FormControlError(errors);
+      throw new FormError(errors);
     }
   }
 
-  protected validateInner(): FormGroupErrorMessages | null {
+  protected validateInner(): FormGroupErrorMessages<UserLoginInput> | null {
     const errors: Record<string, string[]> = {};
 
     if ([

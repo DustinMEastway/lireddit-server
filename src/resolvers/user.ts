@@ -1,11 +1,12 @@
 import { default as argon2 } from 'argon2';
 import { Arg, Ctx, Mutation, Query, Resolver } from 'type-graphql';
 import { v4 } from 'uuid';
+import { FormError } from '../lib/backend/errors'
 
 import { environment } from '../environments';
 import { User } from '../entities';
 import { sendEmail, Time } from '../functions';
-import { AppContext, FormControlError, RedisKey } from '../types';
+import { AppContext, RedisKey } from '../types';
 import { UserCreateInput, UserLoginInput } from './input-types';
 
 @Resolver()
@@ -30,8 +31,8 @@ export class UserResolver {
     const { password, username } = input;
     const existingUser = await entityManager.findOne(User, { $or: [ { username }, { email: username } ] });
     if (!existingUser || !await argon2.verify(existingUser.password, password)) {
-      throw new FormControlError({
-        errors: [ 'Invalid username or password.' ]
+      throw new FormError({
+        control: [ 'Invalid username or password.' ]
       });
     }
 
@@ -68,8 +69,8 @@ export class UserResolver {
       $or: [ { username }, { email: username }, { email }, { username: email } ]
     });
     if (existingUser) {
-      throw new FormControlError({
-        children: { username: [ 'Username already exists.' ] }
+      throw new FormError({
+        children: { username: { control: [ 'Username already exists.' ] } }
       });
     }
 
@@ -92,8 +93,8 @@ export class UserResolver {
   ): Promise<boolean> {
     const user = await entityManager.findOne(User, { email });
     if (!user) {
-      throw new FormControlError({
-        children: { email: [ 'Email does not exist.' ] }
+      throw new FormError({
+        children: { email: { control: [ 'Email does not exist.' ] } }
       });
     }
 

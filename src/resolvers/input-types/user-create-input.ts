@@ -1,7 +1,7 @@
 import { Field, InputType } from 'type-graphql';
+import { FormGroupErrorMessages } from '../../lib/forms';
 
 import { validateString } from '../../functions';
-import { FormGroupErrorMessages } from '../../types';
 import { UserLoginInput } from './user-login-input';
 
 @InputType()
@@ -9,7 +9,7 @@ export class UserCreateInput extends UserLoginInput {
   @Field()
   email: string;
 
-  protected validateInner(): FormGroupErrorMessages | null {
+  protected validateInner(): FormGroupErrorMessages<UserCreateInput> | null {
     this.email = this.email.trim();
 
     const baseValidation = super.validateInner();
@@ -28,7 +28,7 @@ export class UserCreateInput extends UserLoginInput {
       })
     ].some(v => !v)) {
       return {
-        errors: baseValidation?.errors,
+        control: baseValidation?.control,
         children: {
           ...baseValidation?.children,
           ...errors
