@@ -16,7 +16,7 @@ export abstract class InputBase {
   }
 
   public getErrors(): FormGroupErrorMessages<this> | null {
-    const validation = this.getValidation();
+    const validation = this.getValidation<this>();
     if (validation == null) {
       return null;
     }
@@ -24,7 +24,7 @@ export abstract class InputBase {
     return createValidator(validation as FormValidation<this>)(this) as FormGroupErrorMessages<this>;
   }
 
-  protected getValidation(): FormGroupValidation<this> | null {
+  protected getValidation<T = this>(): FormGroupValidation<T> | null {
     return null;
   }
 }

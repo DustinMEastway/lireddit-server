@@ -16,7 +16,7 @@ export module FormGroupValidation {
 
     const children = (validation as FormArrayValidation<any> | FormGroupValidation<T> | null)?.children;
 
-    return (
+    return children == null || (
       typeof children === 'object'
       && !(children instanceof Array)
       && Object.values(children).every((c): boolean => FormControlValidation.isInstance(c))

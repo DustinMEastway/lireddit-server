@@ -27,7 +27,7 @@ export class UserResolver {
     @Arg('input') input: UserLoginInput,
     @Ctx() { entityManager, request }: AppContext
   ): Promise<User> {
-    input.validate();
+    input.throwIfInvalid();
     const { password, username } = input;
     const existingUser = await entityManager.findOne(User, { $or: [ { username }, { email: username } ] });
     if (!existingUser || !await argon2.verify(existingUser.password, password)) {
@@ -62,7 +62,7 @@ export class UserResolver {
     @Arg('input') input: UserCreateInput,
     @Ctx() { entityManager, request }: AppContext
   ): Promise<User> {
-    input.validate();
+    input.throwIfInvalid();
     const { email, password, username } = input;
 
     const existingUser = await entityManager.findOne(User, {

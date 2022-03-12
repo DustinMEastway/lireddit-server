@@ -1,42 +1,30 @@
 import { Field, InputType } from 'type-graphql';
-import { FormError } from '../../lib/backend/errors';
-import { FormGroupErrorMessages } from '../../lib/forms';
+import { extendValidation, ControlValidators, FormGroupValidation } from '../../lib/forms';
 
-import { validateString } from '../../functions';
+import { InputBase } from './input-base';
 
 @InputType()
-export class UserLoginInput {
+export class UserLoginInput extends InputBase {
   @Field()
   password: string;
   @Field()
   username: string;
 
-  validate(): void {
-    this.password = this.password.trim();
-    this.username = this.username.trim();
-    const errors = this.validateInner();
-
-    if (errors) {
-      throw new FormError(errors);
-    }
-  }
-
-  protected validateInner(): FormGroupErrorMessages<UserLoginInput> | null {
-    const errors: Record<string, string[]> = {};
-
-    if ([
-      validateString(errors, 'password', this.password, {
-        minLength: 3,
-        required: true
-      }),
-      validateString(errors, 'username', this.username, {
-        minLength: 3,
-        required: true
-      })
-    ].some(v => !v)) {
-      return { children: errors };
-    }
-
-    return null;
+  protected getValidation<T = this>(): FormGroupValidation<T> | null;
+  protected getValidation(): FormGroupValidation<UserLoginInput> | null {
+    return extendValidation(super.getValidation(), {
+      children: {
+        password: ControlValidators.string('Password', {
+          maxlength: 100,
+          minlength: 3,
+          required: true
+        }),
+        username: ControlValidators.string('Username', {
+          maxlength: 30,
+          minlength: 3,
+          required: true
+        })
+      }
+    });
   }
 }

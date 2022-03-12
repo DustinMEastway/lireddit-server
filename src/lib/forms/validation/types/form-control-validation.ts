@@ -1,4 +1,4 @@
-import { FormValidator } from '../validators';
+import { FormValidator } from '../../validators';
 
 export interface FormControlValidation<T> {
   control?: {
@@ -17,7 +17,7 @@ export module FormControlValidation {
 
     const control = (validation as FormControlValidation<T> | null)?.control;
 
-    return !control || (
+    return control == null || (
       typeof control === 'object'
       && typeof control.label === 'string'
       && control.validators instanceof Array
