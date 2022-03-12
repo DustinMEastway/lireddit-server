@@ -10,7 +10,7 @@ export abstract class InputBase {
   public throwIfInvalid(): void {
     const errors = this.getErrors();
 
-    if (errors) {
+    if (errors != null) {
       throw new FormError(errors);
     }
   }

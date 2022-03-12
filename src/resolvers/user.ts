@@ -30,6 +30,7 @@ export class UserResolver {
     input.throwIfInvalid();
     const { password, username } = input;
     const existingUser = await entityManager.findOne(User, { $or: [ { username }, { email: username } ] });
+
     if (!existingUser || !await argon2.verify(existingUser.password, password)) {
       throw new FormError({
         control: [ 'Invalid username or password.' ]

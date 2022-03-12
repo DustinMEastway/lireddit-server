@@ -7,18 +7,18 @@ import { requireErrorsProcessor } from './require-errors-processor';
 
 export interface CreateValidatorConfig<T> {
   errorsProcessor?: (errors: FormErrors<T>) => FormErrorMessages<T>;
-  validationProcessor?: (validation: FormValidation<T>, value: T) => FormErrors<T>;
+  validationProcessor?: (validation: FormValidation<T>, value: T) => FormErrors<T> | null;
 }
 
 export function createValidator<T>(
   validation: FormValidation<T>,
   { errorsProcessor, validationProcessor }: CreateValidatorConfig<T> = {}
-): (value: T) => FormErrorMessages<T> {
+): (value: T) => FormErrorMessages<T> | null {
   return (value) => {
     validationProcessor ??= runValidation;
     errorsProcessor ??= (errors) => requireErrorsProcessor(validation, errors, defaultErrorProcessor);
 
     const errors = validationProcessor(validation, value);
-    return errorsProcessor(errors);
+    return (errors == null) ? null : errorsProcessor(errors);
   };
 }

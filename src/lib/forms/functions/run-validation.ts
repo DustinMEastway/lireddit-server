@@ -10,31 +10,45 @@ import {
   FormValidation
 } from '../validation';
 
-export function runValidation<T>(validation: FormValidation<T>, value: T): FormErrors<T> {
-  const errors: FormErrors<T> = {};
+export function runValidation<T>(validation: FormValidation<T>, value: T): FormErrors<T> | null {
+  const errors = {} as FormErrors<T>;
 
   if (validation.control) {
-    errors.control = validation.control.validators?.map((validator): FormControlError | null =>
+    const control = validation.control.validators?.map((validator): FormControlError | null =>
       validator(value)
     ).filter((error): boolean =>
       !!error
     ) as FormControlError[];
+
+    if (control.length) {
+      errors.control = control;
+    }
   }
 
-  if (FormArrayValidation.isInstance(validation) && value instanceof Array) {
-    (errors as FormArrayErrors<T>).children = validation.children?.map((childControl, childKey) => {
-      return runValidation<T[keyof(T)]>(childControl, value[childKey]);
+  if (FormArrayValidation.isInstance(validation) && validation.children && value instanceof Array) {
+    const children = validation.children?.map((childControl, childKey) => {
+      return runValidation<T[keyof(T)]>(childControl as FormValidation<T[keyof(T)]>, value[childKey]);
     });
-  } else if (FormGroupValidation.isInstance(validation) && typeof value === 'object') {
+    if (children?.length) {
+      (errors as FormArrayErrors<T>).children = children;
+    }
+  } else if (FormGroupValidation.isInstance(validation) && validation.children && typeof value === 'object') {
     const childrenControls = (Object.entries(validation.children ?? {}) as [keyof(T), FormValidation<T[keyof(T)]>][]);
-    (errors as FormGroupErrors<T>).children = childrenControls.reduce((
+    const children = childrenControls.reduce((
       childrenErrors,
       [childKey, childControl]
     ) => {
-      childrenErrors![childKey] = runValidation(childControl, value[childKey]);
+      const childErrors = runValidation(childControl, value[childKey]);
+      if (childErrors != null) {
+        childrenErrors![childKey] = childErrors;
+      }
       return childrenErrors;
     }, {} as FormGroupErrors<T>['children'])
+
+    if (Object.keys(children ?? {}).length) {
+      (errors as FormGroupErrors<T>).children = children;
+    }
   }
 
-  return errors;
+  return Object.keys(errors).length ? errors : null;
 }

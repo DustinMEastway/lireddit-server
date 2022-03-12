@@ -3,7 +3,7 @@ import { FormErrors } from './form-errors';
 import { FormGroupErrors } from './form-group-errors';
 
 export interface FormArrayErrors<T> extends FormControlErrors {
-  children?: FormErrors<T[keyof(T)]>[];
+  children?: (FormErrors<T[keyof(T)]> | null)[];
 }
 
 export module FormArrayErrors {
