@@ -11,6 +11,35 @@ import { UserCreateInput, UserLoginInput } from './input-types';
 
 @Resolver()
 export class UserResolver {
+  @Mutation(() => User)
+  async userCreate(
+    @Arg('input') input: UserCreateInput,
+    @Ctx() { entityManager, request }: AppContext
+  ): Promise<User> {
+    input.throwIfInvalid();
+    const { email, password, username } = input;
+
+    const existingUser = await entityManager.findOne(User, {
+      $or: [ { username }, { email: username }, { email }, { username: email } ]
+    });
+    if (existingUser) {
+      throw new FormError({
+        children: { username: { control: [ 'Username already exists.' ] } }
+      });
+    }
+
+    const user = entityManager.create(User, {
+      email,
+      password: await argon2.hash(password),
+      username
+    });
+    await entityManager.persistAndFlush(user);
+
+    request.session.userId = user.id;
+
+    return user;
+  }
+
   @Query(() => User, { nullable: true })
   async userDetails(
     @Ctx() { entityManager, request }: AppContext
@@ -20,6 +49,33 @@ export class UserResolver {
     return (userId)
       ? await entityManager.findOne(User, { id: userId })
       : null;
+  }
+
+  @Mutation(() => Boolean)
+  async userForgotPassword(
+    @Arg('email') email: string,
+    @Ctx() { entityManager, redis }: AppContext
+  ): Promise<boolean> {
+    const user = await entityManager.findOne(User, { email });
+    if (!user) {
+      throw new FormError({
+        children: { email: { control: [ 'Email does not exist.' ] } }
+      });
+    }
+
+    const token = v4();
+    await redis.set(`${RedisKey.forgotPassword}:${token}`, user.id, 'ex', Time.converters.fromDay(3));
+
+    await sendEmail({
+      from: 'lireddit@lireddit.com',
+      html: [
+        `<a href="http://localhost:3000/change-password/${token}">Change Password</a>`
+      ].join('\n'),
+      subject: 'Password Change Request',
+      to: email
+    });
+
+    return true;
   }
 
   @Mutation(() => User)
@@ -56,61 +112,5 @@ export class UserResolver {
         resolve(!error);
       });
     });
-  }
-
-  @Mutation(() => User)
-  async userCreate(
-    @Arg('input') input: UserCreateInput,
-    @Ctx() { entityManager, request }: AppContext
-  ): Promise<User> {
-    input.throwIfInvalid();
-    const { email, password, username } = input;
-
-    const existingUser = await entityManager.findOne(User, {
-      $or: [ { username }, { email: username }, { email }, { username: email } ]
-    });
-    if (existingUser) {
-      throw new FormError({
-        children: { username: { control: [ 'Username already exists.' ] } }
-      });
-    }
-
-    const user = entityManager.create(User, {
-      email,
-      password: await argon2.hash(password),
-      username
-    });
-    await entityManager.persistAndFlush(user);
-
-    request.session.userId = user.id;
-
-    return user;
-  }
-
-  @Mutation(() => Boolean)
-  async userRequestChangePassword(
-    @Arg('email') email: string,
-    @Ctx() { entityManager, redis }: AppContext
-  ): Promise<boolean> {
-    const user = await entityManager.findOne(User, { email });
-    if (!user) {
-      throw new FormError({
-        children: { email: { control: [ 'Email does not exist.' ] } }
-      });
-    }
-
-    const token = v4();
-    await redis.set(`${RedisKey}:${token}`, user.id, 'ex', Time.converters.fromDay(3));
-
-    await sendEmail({
-      from: 'lireddit@lireddit.com',
-      html: [
-        `<a href="http://localhost:3000/change-password/${token}">Change Password</a>`
-      ].join('\n'),
-      subject: 'Password Change Request',
-      to: email
-    });
-
-    return true;
   }
 }
