@@ -20,7 +20,7 @@ export function requireErrorsProcessor<T>(
   errors: FormErrors<T>,
   errorProcessor: (control: FormValidation<any>, error: FormControlError) => string | null
 ): FormErrorMessages<T> {
-  const errorMessages: FormErrorMessages<T> = {};
+  const errorMessages = {} as FormErrorMessages<T>;
 
   if (errors.control) {
     errorMessages.control = errors.control.map((error): string => {
@@ -34,12 +34,19 @@ export function requireErrorsProcessor<T>(
 
   if (FormArrayValidation.isInstance<unknown[]>(validation) && FormArrayErrors.isInstance(errors)) {
     (errorMessages as FormArrayErrorMessages<T>).children = errors.children?.map((childErrors, childKey) => {
-      return requireErrorsProcessor<T[keyof(T)]>(validation.children![childKey], childErrors, errorProcessor);
+      return (childErrors == null) ? null : requireErrorsProcessor<T[keyof(T)]>(
+        validation.children![childKey] as FormValidation<T[keyof(T)]>,
+        childErrors as FormErrors<T[keyof(T)]>,
+        errorProcessor
+      );
     });
   } else if (FormGroupValidation.isInstance<T>(validation) && FormGroupErrors.isInstance(errors)) {
     const childrenErrors = Object.entries(errors.children ?? {}) as [keyof(T), FormErrors<T[keyof(T)]>][]
     (errorMessages as FormGroupErrorMessages<T>).children = childrenErrors.reduce((childrenMessages, [childKey, childErrors]) => {
-      childrenMessages![childKey] = requireErrorsProcessor<T[keyof(T)]>(validation.children![childKey]!, childErrors, errorProcessor);
+      childrenMessages![childKey] = requireErrorsProcessor<T[keyof(T)]>(
+        validation.children![childKey]! as FormValidation<T[keyof(T)]>,
+        childErrors, errorProcessor
+      );
       return childrenMessages;
     }, {} as FormGroupErrorMessages<T>['children']);
   }

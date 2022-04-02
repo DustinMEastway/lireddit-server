@@ -7,10 +7,48 @@ import { environment } from '../environments';
 import { User } from '../entities';
 import { sendEmail, Time } from '../functions';
 import { AppContext, RedisKey } from '../types';
-import { UserCreateInput, UserLoginInput } from './input-types';
+import {
+  UserChangePasswordInput,
+  UserCreateInput,
+  UserLoginInput
+} from './graphql-types';
 
 @Resolver()
 export class UserResolver {
+  @Mutation(() => Boolean)
+  async userChangePassword(
+    @Arg('input') input: UserChangePasswordInput,
+    @Ctx() { entityManager, redis, request }: AppContext
+  ): Promise<true> {
+    input.throwIfInvalid();
+    const { password, token } = input;
+    const userId = await redis.get(`${RedisKey.forgotPassword}:${token}`);
+    const user = (!userId) ? null : await entityManager.findOne(User, { id: parseInt(userId, 10) });
+    if (!user) {
+      throw new FormError({
+        children: { token: { control: [ 'Invalid token, please request to change your password again.' ] } }
+      });
+    }
+
+    user.password = await this.hashPassword(password);
+
+    await entityManager.persistAndFlush(user);
+
+    request.session.userId = user.id;
+
+    await redis.del(`${RedisKey.forgotPassword}:${token}`);
+    await sendEmail({
+      from: 'lireddit@lireddit.com',
+      html: [
+        `Your password has been sucessfully updated!`
+      ].join('\n'),
+      subject: 'Password Change Complete',
+      to: user.email
+    });
+
+    return true;
+  }
+
   @Mutation(() => User)
   async userCreate(
     @Arg('input') input: UserCreateInput,
@@ -30,7 +68,7 @@ export class UserResolver {
 
     const user = entityManager.create(User, {
       email,
-      password: await argon2.hash(password),
+      password: await this.hashPassword(password),
       username
     });
     await entityManager.persistAndFlush(user);
@@ -55,7 +93,7 @@ export class UserResolver {
   async userForgotPassword(
     @Arg('email') email: string,
     @Ctx() { entityManager, redis }: AppContext
-  ): Promise<boolean> {
+  ): Promise<true> {
     const user = await entityManager.findOne(User, { email });
     if (!user) {
       throw new FormError({
@@ -69,7 +107,7 @@ export class UserResolver {
     await sendEmail({
       from: 'lireddit@lireddit.com',
       html: [
-        `<a href="http://localhost:3000/change-password/${token}">Change Password</a>`
+        `<a href="${environment.urls.app}/change-password/${token}">Change Password</a>`
       ].join('\n'),
       subject: 'Password Change Request',
       to: email
@@ -112,5 +150,10 @@ export class UserResolver {
         resolve(!error);
       });
     });
+  }
+
+  /** Hashes the provided password before it is stored in the database. */
+  protected hashPassword(password: string): Promise<string> {
+    return argon2.hash(password);
   }
 }

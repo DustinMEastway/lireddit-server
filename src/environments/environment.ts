@@ -5,5 +5,8 @@ export const environment = {
     type: 'postgresql'
   },
   port: 4000,
-  prod: false
+  prod: false,
+  urls: {
+    app: 'http://localhost:3000'
+  }
 } as const;

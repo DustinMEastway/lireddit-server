@@ -2,26 +2,21 @@ import { Field, InputType } from 'type-graphql';
 import { extendValidation, ControlValidators, FormGroupValidation } from '../../lib/forms';
 
 import { InputBase } from './input-base';
+import { passwordValidation } from './validation';
 
 @InputType()
-export class UserLoginInput extends InputBase {
+export class UserChangePasswordInput extends InputBase {
   @Field()
   password: string;
   @Field()
-  username: string;
+  token: string;
 
   protected getValidation<T = this>(): FormGroupValidation<T> | null;
-  protected getValidation(): FormGroupValidation<UserLoginInput> | null {
+  protected getValidation(): FormGroupValidation<UserChangePasswordInput> | null {
     return extendValidation(super.getValidation(), {
       children: {
-        password: ControlValidators.string('Password', {
-          maxlength: 100,
-          minlength: 3,
-          required: true
-        }),
-        username: ControlValidators.string('Username', {
-          maxlength: 30,
-          minlength: 3,
+        password: passwordValidation,
+        token: ControlValidators.string('token', {
           required: true
         })
       }
