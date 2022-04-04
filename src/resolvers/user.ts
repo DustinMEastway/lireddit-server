@@ -15,11 +15,11 @@ import {
 
 @Resolver()
 export class UserResolver {
-  @Mutation(() => Boolean)
+  @Mutation(() => User)
   async userChangePassword(
     @Arg('input') input: UserChangePasswordInput,
     @Ctx() { entityManager, redis, request }: AppContext
-  ): Promise<true> {
+  ): Promise<User> {
     input.throwIfInvalid();
     const { password, token } = input;
     const userId = await redis.get(`${RedisKey.forgotPassword}:${token}`);
@@ -34,6 +34,7 @@ export class UserResolver {
 
     await entityManager.persistAndFlush(user);
 
+    // log user in
     request.session.userId = user.id;
 
     await redis.del(`${RedisKey.forgotPassword}:${token}`);
@@ -46,7 +47,7 @@ export class UserResolver {
       to: user.email
     });
 
-    return true;
+    return user;
   }
 
   @Mutation(() => User)
@@ -91,13 +92,13 @@ export class UserResolver {
 
   @Mutation(() => Boolean)
   async userForgotPassword(
-    @Arg('email') email: string,
+    @Arg('input') input: string,
     @Ctx() { entityManager, redis }: AppContext
   ): Promise<true> {
-    const user = await entityManager.findOne(User, { email });
+    const user = await entityManager.findOne(User, { $or: [ { username: input }, { email: input } ] });
     if (!user) {
       throw new FormError({
-        children: { email: { control: [ 'Email does not exist.' ] } }
+        children: { input: { control: [ 'Email/Username does not exist.' ] } }
       });
     }
 
@@ -110,7 +111,7 @@ export class UserResolver {
         `<a href="${environment.urls.app}/change-password/${token}">Change Password</a>`
       ].join('\n'),
       subject: 'Password Change Request',
-      to: email
+      to: user.email
     });
 
     return true;
