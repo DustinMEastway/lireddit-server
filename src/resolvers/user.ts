@@ -18,21 +18,21 @@ export class UserResolver {
   @Mutation(() => User)
   async userChangePassword(
     @Arg('input') input: UserChangePasswordInput,
-    @Ctx() { entityManager, redis, request }: AppContext
+    @Ctx() { redis, request }: AppContext
   ): Promise<User> {
     input.throwIfInvalid();
     const { password, token } = input;
     const userId = await redis.get(`${RedisKey.forgotPassword}:${token}`);
-    const user = (!userId) ? null : await entityManager.findOne(User, { id: parseInt(userId, 10) });
+    const user = (!userId) ? null : await User.findOne({ where: { id: parseInt(userId, 10) } });
     if (!user) {
       throw new FormError({
         children: { token: { control: [ 'Invalid token, please request to change your password again.' ] } }
       });
     }
 
-    user.password = await this.hashPassword(password);
-
-    await entityManager.persistAndFlush(user);
+    await User.update({ id: user.id }, {
+      password: await this.hashPassword(password)
+    });
 
     // log user in
     request.session.userId = user.id;
@@ -53,26 +53,29 @@ export class UserResolver {
   @Mutation(() => User)
   async userCreate(
     @Arg('input') input: UserCreateInput,
-    @Ctx() { entityManager, request }: AppContext
+    @Ctx() { request }: AppContext
   ): Promise<User> {
     input.throwIfInvalid();
     const { email, password, username } = input;
 
-    const existingUser = await entityManager.findOne(User, {
-      $or: [ { username }, { email: username }, { email }, { username: email } ]
-    });
+    const existingUser = await User.findOne({ where: [
+      { username },
+      { email: username },
+      { email },
+      { username: email }
+    ] });
     if (existingUser) {
       throw new FormError({
-        children: { username: { control: [ 'Username already exists.' ] } }
+        children: { username: { control: [ 'Username and/or Email already exists.' ] } }
       });
     }
 
-    const user = entityManager.create(User, {
+    const user = User.create({
       email,
       password: await this.hashPassword(password),
       username
     });
-    await entityManager.persistAndFlush(user);
+    await user.save();
 
     request.session.userId = user.id;
 
@@ -81,21 +84,21 @@ export class UserResolver {
 
   @Query(() => User, { nullable: true })
   async userDetails(
-    @Ctx() { entityManager, request }: AppContext
+    @Ctx() { request }: AppContext
   ): Promise<User | null> {
     const userId = request.session.userId;
 
     return (userId)
-      ? await entityManager.findOne(User, { id: userId })
+      ? await User.findOne({ where: { id: userId } })
       : null;
   }
 
   @Mutation(() => Boolean)
   async userForgotPassword(
     @Arg('input') input: string,
-    @Ctx() { entityManager, redis }: AppContext
+    @Ctx() { redis }: AppContext
   ): Promise<true> {
-    const user = await entityManager.findOne(User, { $or: [ { username: input }, { email: input } ] });
+    const user = await User.findOne({ where: [ { username: input }, { email: input } ] });
     if (!user) {
       throw new FormError({
         children: { input: { control: [ 'Email/Username does not exist.' ] } }
@@ -120,11 +123,11 @@ export class UserResolver {
   @Mutation(() => User)
   async userLogin(
     @Arg('input') input: UserLoginInput,
-    @Ctx() { entityManager, request }: AppContext
+    @Ctx() { request }: AppContext
   ): Promise<User> {
     input.throwIfInvalid();
     const { password, username } = input;
-    const existingUser = await entityManager.findOne(User, { $or: [ { username }, { email: username } ] });
+    const existingUser = await User.findOne({ where: [ { username }, { email: username } ] });
 
     if (!existingUser || !await argon2.verify(existingUser.password, password)) {
       throw new FormError({

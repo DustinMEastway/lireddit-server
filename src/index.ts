@@ -1,4 +1,4 @@
-import { MikroORM } from '@mikro-orm/core';
+import 'reflect-metadata';
 import { ApolloServer } from 'apollo-server-express';
 import { default as connectRedis } from 'connect-redis';
 import { default as cors } from 'cors';
@@ -6,24 +6,27 @@ import { default as express, Express } from 'express';
 import { default as expressSession } from 'express-session';
 import IoRedis, { Redis } from 'ioredis';
 import { buildSchema } from 'type-graphql';
+import { createConnection } from 'typeorm';
 
+import { entities } from './entities';
 import { environment } from './environments';
-import { default as mikroOrmConfig }  from './mikro-orm.config';
 import { resolvers } from './resolvers';
 import { AppContext } from './types';
 
+async function addEntityManager(): Promise<void> {
+  await createConnection({
+    entities,
+    ...environment.database
+  });
+}
+
 async function addGraphQlMiddleware(
   app: Express,
-  context: Omit<AppContext, 'entityManager' | 'request' | 'response'>
+  context: Omit<AppContext, 'request' | 'response'>
 ): Promise<void> {
-  const orm = await MikroORM.init(mikroOrmConfig);
-  // run the migration scripts
-  await orm.getMigrator().up();
-
   const apolloServer = new ApolloServer({
     context: ({ req, res }): AppContext => ({
       ...context,
-      entityManager: orm.em as AppContext['entityManager'],
       request: req,
       response: res
     }),
@@ -73,8 +76,9 @@ async function main(): Promise<void> {
 
   app.use(cors({
     credentials: true,
-    origin: 'http://localhost:3000'
-  }))
+    origin: environment.urls.app
+  }));
+  await addEntityManager();
   const redis = await addRedisSessionMiddleware(app);
   await addGraphQlMiddleware(app, { redis });
 

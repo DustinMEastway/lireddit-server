@@ -1,5 +1,3 @@
-import { Connection, EntityManager, IDatabaseDriver } from '@mikro-orm/core';
-import { EntityManager as PostgresqlEntityManager } from '@mikro-orm/postgresql';
 import { Request, Response } from 'express';
 import { Redis } from 'ioredis';
 
@@ -11,7 +9,6 @@ declare module 'express-session' {
 }
 
 export interface AppContext {
-  entityManager: EntityManager<IDatabaseDriver<Connection>> & PostgresqlEntityManager;
   redis: Redis;
   request: Request;
   response: Response;
