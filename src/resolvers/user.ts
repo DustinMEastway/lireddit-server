@@ -9,6 +9,7 @@ import { sendEmail, Time } from '../functions';
 import { AppContext, RedisKey } from '../types';
 import {
   UserChangePasswordInput,
+  UserChangePasswordTokenCheckInput,
   UserCreateInput,
   UserLoginInput
 } from './graphql-types';
@@ -22,8 +23,7 @@ export class UserResolver {
   ): Promise<User> {
     input.throwIfInvalid();
     const { password, token } = input;
-    const userId = await redis.get(`${RedisKey.forgotPassword}:${token}`);
-    const user = (!userId) ? null : await User.findOne({ where: { id: parseInt(userId, 10) } });
+    const user = await this.getUserFromChangePasswordToken(token, redis);
     if (!user) {
       throw new FormError({
         children: { token: { control: [ 'Invalid token, please request to change your password again.' ] } }
@@ -48,6 +48,15 @@ export class UserResolver {
     });
 
     return user;
+  }
+
+  @Query(() => Boolean)
+  async userChangePasswordTokenCheck(
+    @Arg('input') input: UserChangePasswordTokenCheckInput,
+    @Ctx() { redis }: AppContext
+  ): Promise<boolean> {
+    input.throwIfInvalid();
+    return !!await this.getUserFromChangePasswordToken(input.token, redis);
   }
 
   @Mutation(() => User)
@@ -154,6 +163,12 @@ export class UserResolver {
         resolve(!error);
       });
     });
+  }
+
+  /** Get the user for the provided token if the token and user exist. */
+  protected async getUserFromChangePasswordToken(token: string, redis: AppContext['redis']): Promise<User | null> {
+    const userId = await redis.get(`${RedisKey.forgotPassword}:${token}`);
+    return (!userId) ? null : await User.findOne({ where: { id: parseInt(userId, 10) } });
   }
 
   /** Hashes the provided password before it is stored in the database. */

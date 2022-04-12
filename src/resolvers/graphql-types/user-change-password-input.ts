@@ -1,24 +1,19 @@
 import { Field, InputType } from 'type-graphql';
-import { extendValidation, ControlValidators, FormGroupValidation } from '../../lib/forms';
+import { extendValidation, FormGroupValidation } from '../../lib/forms';
 
-import { InputBase } from './input-base';
+import { UserChangePasswordTokenCheckInput } from './user-change-password-token-check-input';
 import { passwordValidation } from './validation';
 
 @InputType()
-export class UserChangePasswordInput extends InputBase {
+export class UserChangePasswordInput extends UserChangePasswordTokenCheckInput {
   @Field()
   password: string;
-  @Field()
-  token: string;
 
   protected getValidation<T = this>(): FormGroupValidation<T> | null;
   protected getValidation(): FormGroupValidation<UserChangePasswordInput> | null {
     return extendValidation(super.getValidation(), {
       children: {
-        password: passwordValidation,
-        token: ControlValidators.string('token', {
-          required: true
-        })
+        password: passwordValidation
       }
     });
   }

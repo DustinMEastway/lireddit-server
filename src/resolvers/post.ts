@@ -59,7 +59,6 @@ export class PostResolver {
   }
 
   @Query(() => [ Post ])
-  @UseMiddleware(isAuthenticated)
   posts(): Promise<Post[]> {
     return Post.find();
   }
