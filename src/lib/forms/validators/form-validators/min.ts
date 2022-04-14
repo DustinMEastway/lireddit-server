@@ -5,7 +5,7 @@ import { requiredValidator } from './required';
 
 export const minValidator: ((min: number) => FormValidator<number>) & Keyed = (min: number) => {
   return (value): [string, MinError] | null => {
-    return (requiredValidator(value) || value <= min)
+    return (requiredValidator(value) || value >= min)
       ? null
       : [minValidator.key, { min, value }];
   };

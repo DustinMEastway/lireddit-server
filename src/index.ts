@@ -5,6 +5,7 @@ import { default as cors } from 'cors';
 import { default as express, Express } from 'express';
 import { default as expressSession } from 'express-session';
 import IoRedis, { Redis } from 'ioredis';
+import { join as pathJoin } from 'path';
 import { buildSchema } from 'type-graphql';
 import { createConnection } from 'typeorm';
 
@@ -14,10 +15,13 @@ import { resolvers } from './resolvers';
 import { AppContext } from './types';
 
 async function addEntityManager(): Promise<void> {
-  await createConnection({
+  const connection = await createConnection({
     entities,
+    migrations: [pathJoin(__dirname, 'migrations/*')],
     ...environment.database
   });
+
+  await connection.runMigrations();
 }
 
 async function addGraphQlMiddleware(

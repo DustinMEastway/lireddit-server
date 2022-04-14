@@ -5,7 +5,7 @@ import { requiredValidator } from './required';
 
 export const maxValidator: ((max: number) => FormValidator<number>) & Keyed = (max: number) => {
   return (value): [string, MaxError] | null => {
-    return (requiredValidator(value) || value.length <= max)
+    return (requiredValidator(value) || value <= max)
       ? null
       : [maxValidator.key, { max, value }];
   };

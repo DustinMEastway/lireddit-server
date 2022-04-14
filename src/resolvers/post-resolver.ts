@@ -10,7 +10,7 @@ import {
 import { Post } from '../entities';
 import { isAuthenticated } from '../middleware';
 import { AppContext } from '../types';
-import { PostCreateInput } from './graphql-types';
+import { PostCreateInput, PostListInput } from './graphql-types';
 
 @Resolver()
 export class PostResolver {
@@ -59,7 +59,21 @@ export class PostResolver {
   }
 
   @Query(() => [ Post ])
-  posts(): Promise<Post[]> {
-    return Post.find();
+  postList(
+    @Arg('input', () => PostListInput, { nullable: true }) input: PostListInput | null
+  ): Promise<Post[]> {
+    input?.throwIfInvalid();
+    const { cursor, limit } = { ...input };
+    let query = Post
+      .createQueryBuilder('post');
+
+    if (cursor) {
+      query = query.where('post.createdAt < :cursor', { cursor: new Date(parseInt(cursor)) })
+    }
+
+    return query
+      .orderBy('"createdAt"')
+      .take(limit ?? PostListInput.defaultLimit)
+      .getMany();
   }
 }
