@@ -1,6 +1,8 @@
 import {
   emailValidator,
+  maxValidator,
   maxlengthValidator,
+  minValidator,
   minlengthValidator,
   patternValidator,
   patternValidatorBase,
@@ -10,7 +12,9 @@ import {
 
 export class Validators {
   public static readonly email = emailValidator;
+  public static readonly max = maxValidator;
   public static readonly maxlength = maxlengthValidator;
+  public static readonly min = minValidator;
   public static readonly minlength = minlengthValidator;
   public static readonly pattern = patternValidator;
   public static readonly patternBase = patternValidatorBase;
