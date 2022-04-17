@@ -44,4 +44,9 @@ export class Post extends BaseEntity {
   @Field()
   @Column({ type: 'int', default: 0 })
   votes!: number;
+
+  @Field(() => String)
+  textSnippet(): string {
+    return this.text.slice(0, this.text.indexOf('\n'));
+  }
 }

@@ -72,7 +72,7 @@ export class PostResolver {
     }
 
     return query
-      .orderBy('"createdAt"')
+      .orderBy('"createdAt"', 'DESC')
       .take(limit ?? PostListInput.defaultLimit)
       .getMany();
   }
