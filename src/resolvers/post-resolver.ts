@@ -10,7 +10,11 @@ import {
 import { Post } from '../entities';
 import { isAuthenticated } from '../middleware';
 import { AppContext } from '../types';
-import { PostCreateInput, PostListInput } from './graphql-types';
+import {
+  PostCreateInput,
+  PostListInput,
+  PostListOutput
+} from './graphql-types';
 
 @Resolver()
 export class PostResolver {
@@ -58,12 +62,12 @@ export class PostResolver {
     return post;
   }
 
-  @Query(() => [ Post ])
-  postList(
+  @Query(() => PostListOutput)
+  async postList(
     @Arg('input', () => PostListInput, { nullable: true }) input: PostListInput | null
-  ): Promise<Post[]> {
+  ): Promise<PostListOutput> {
     input?.throwIfInvalid();
-    const { cursor, limit } = { ...input };
+    let { cursor, limit } = { ...input };
     let query = Post
       .createQueryBuilder('post');
 
@@ -71,9 +75,16 @@ export class PostResolver {
       query = query.where('post.createdAt < :cursor', { cursor: new Date(parseInt(cursor)) })
     }
 
-    return query
-      .orderBy('"createdAt"', 'DESC')
-      .take(limit ?? PostListInput.defaultLimit)
-      .getMany();
+    limit = limit ?? PostListInput.defaultLimit;
+    const posts = await query
+        .orderBy('"createdAt"', 'DESC')
+        // try to get an extra to populate `hasMore`
+        .take(limit + 1)
+        .getMany();
+
+    return {
+      hasMore: posts.length > limit,
+      items: posts.slice(0, limit)
+    };
   }
 }
