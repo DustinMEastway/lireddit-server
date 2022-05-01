@@ -77,9 +77,10 @@ export class PostResolver {
 
     limit = limit ?? PostListInput.defaultLimit;
     const posts = await query
-        .orderBy('"createdAt"', 'DESC')
+        .orderBy('post.createdAt', 'DESC')
         // try to get an extra to populate `hasMore`
         .take(limit + 1)
+        .leftJoinAndSelect('post.creator', 'user', 'user.id = post.creatorId')
         .getMany();
 
     return {
