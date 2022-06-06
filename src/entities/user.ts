@@ -1,4 +1,4 @@
-import { Field, ObjectType } from 'type-graphql';
+import { Ctx, Field, ObjectType } from 'type-graphql';
 import {
   BaseEntity,
   Column,
@@ -9,7 +9,9 @@ import {
   UpdateDateColumn
 } from 'typeorm';
 
+import { AppContext } from '../types';
 import { Post } from './post';
+import { Updoot } from './updoot';
 
 @Entity()
 @ObjectType()
@@ -18,7 +20,6 @@ export class User extends BaseEntity {
   @CreateDateColumn()
   createdAt: Date;
 
-  @Field()
   @Column({ unique: true })
   email!: string;
 
@@ -36,7 +37,17 @@ export class User extends BaseEntity {
   @UpdateDateColumn()
   updatedAt: Date;
 
+  @OneToMany(() => Updoot, (updoot) => updoot.user)
+  updoots: Updoot[];
+
   @Field()
   @Column({ unique: true })
   username!: string;
+
+  @Field(() => String, { name: 'email', nullable: true })
+  emailField(
+    @Ctx() { request }: AppContext
+  ): string | null {
+    return (request.session.userId === this.id) ? this.email : null;
+  }
 }

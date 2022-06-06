@@ -80,7 +80,7 @@ export class PostResolver {
         .orderBy('post.createdAt', 'DESC')
         // try to get an extra to populate `hasMore`
         .take(limit + 1)
-        .leftJoinAndSelect('post.creator', 'user', 'user.id = post.creatorId')
+        .leftJoinAndSelect('post.creator', 'user')
         .getMany();
 
     return {
