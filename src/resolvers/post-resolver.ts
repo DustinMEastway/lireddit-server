@@ -41,9 +41,15 @@ export class PostResolver {
 
   @Query(() => Post, { nullable: true })
   post(
-    @Arg('id') id: number
+    @Arg('id') postId: number,
+    @Ctx() { request }: AppContext
   ): Promise<Post | null> {
-    return Post.findOne({ where: { id } });
+    const { userId } = request.session;
+
+    return Post.createQueryBuilder('post')
+      .where('post.id = :postId', { postId })
+      .leftJoinAndSelect('post.updoots', 'updoot', 'updoot.userId = :userId', { userId })
+      .getOne();
   }
 
   @Mutation(() => Post, { nullable: true })
@@ -64,7 +70,8 @@ export class PostResolver {
 
   @Query(() => PostListOutput)
   async postList(
-    @Arg('input', () => PostListInput, { nullable: true }) input: PostListInput | null
+    @Arg('input', () => PostListInput, { nullable: true }) input: PostListInput | null,
+    @Ctx() { request }: AppContext
   ): Promise<PostListOutput> {
     input?.throwIfInvalid();
     let { cursor, limit } = { ...input };
@@ -76,10 +83,17 @@ export class PostResolver {
     }
 
     limit = limit ?? PostListInput.defaultLimit;
+    const { userId } = request.session;
     const posts = await query
         .orderBy('post.createdAt', 'DESC')
         // try to get an extra to populate `hasMore`
         .take(limit + 1)
+        .leftJoinAndSelect(
+          'post.updoots',
+          'updoot',
+          'updoot.userId = :userId',
+          { userId }
+        )
         .leftJoinAndSelect('post.creator', 'user')
         .getMany();
 

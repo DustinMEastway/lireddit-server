@@ -1,4 +1,4 @@
-import { Field, ObjectType } from 'type-graphql';
+import { Ctx, Field, ObjectType } from 'type-graphql';
 import {
   BaseEntity,
   Column,
@@ -10,6 +10,7 @@ import {
   UpdateDateColumn
 } from 'typeorm';
 
+import { AppContext } from '../types';
 import { Updoot } from './updoot';
 import { User } from './user';
 
@@ -54,5 +55,12 @@ export class Post extends BaseEntity {
   @Field(() => String)
   textSnippet(): string {
     return this.text.slice(0, this.text.indexOf('\n'));
+  }
+
+  @Field(() => Number)
+  userVote(
+    @Ctx() { request }: AppContext
+  ): number {
+    return this.updoots?.find((u) => u.userId === request.session.userId)?.vote ?? 0;
   }
 }
