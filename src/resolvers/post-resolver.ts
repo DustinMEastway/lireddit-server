@@ -8,10 +8,12 @@ import {
 } from 'type-graphql';
 
 import { Post } from '../entities';
+import { FormError } from '../lib/backend/errors'
 import { isAuthenticated } from '../middleware';
 import { AppContext } from '../types';
 import {
   PostCreateInput,
+  PostInput,
   PostListInput,
   PostListOutput
 } from './graphql-types';
@@ -40,16 +42,33 @@ export class PostResolver {
   }
 
   @Query(() => Post, { nullable: true })
-  post(
-    @Arg('id') postId: number,
+  async post(
+    @Arg('input', () => PostInput) input: PostInput,
     @Ctx() { request }: AppContext
   ): Promise<Post | null> {
+    input.throwIfInvalid();
+    const { id } = input;
     const { userId } = request.session;
 
-    return Post.createQueryBuilder('post')
-      .where('post.id = :postId', { postId })
-      .leftJoinAndSelect('post.updoots', 'updoot', 'updoot.userId = :userId', { userId })
+    const post = await Post.createQueryBuilder('post')
+      .where('post.id = :id', { id })
+      .leftJoinAndSelect(
+        'post.updoots',
+        'updoot',
+        'updoot.userId = :userId',
+        { userId }
+      )
+      .leftJoinAndSelect('post.creator', 'user')
       .getOne();
+
+    if (!post) {
+      throw new FormError(
+        { children: { id: { control: ['No post with the provided ID.'] } } },
+        'Post not found.'
+      );
+    }
+
+    return post;
   }
 
   @Mutation(() => Post, { nullable: true })
