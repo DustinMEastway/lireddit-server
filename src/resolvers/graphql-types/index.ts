@@ -3,6 +3,7 @@ export * from './post-delete-input';
 export * from './post-input';
 export * from './post-list-input';
 export * from './post-list-output';
+export * from './post-update-input';
 export * from './updoot-vote-input';
 export * from './user-change-password-input';
 export * from './user-change-password-token-check-input';

@@ -6,6 +6,7 @@ import {
   Resolver,
   UseMiddleware
 } from 'type-graphql';
+import { SelectQueryBuilder } from 'typeorm';
 
 import { Post } from '../entities';
 import { FormError } from '../lib/backend/errors'
@@ -16,7 +17,8 @@ import {
   PostDeleteInput,
   PostInput,
   PostListInput,
-  PostListOutput
+  PostListOutput,
+  PostUpdateInput
 } from './graphql-types';
 
 @Resolver()
@@ -59,15 +61,8 @@ export class PostResolver {
     const { id } = input;
     const { userId } = request.session;
 
-    const post = await Post.createQueryBuilder('post')
+    const post = await this.queryPosts({ userId })
       .where('post.id = :id', { id })
-      .leftJoinAndSelect(
-        'post.updoots',
-        'updoot',
-        'updoot.userId = :userId',
-        { userId }
-      )
-      .leftJoinAndSelect('post.creator', 'user')
       .getOne();
 
     if (!post) {
@@ -83,15 +78,23 @@ export class PostResolver {
   @Mutation(() => Post, { nullable: true })
   @UseMiddleware(isAuthenticated)
   async postUpdate(
-    @Arg('id') id: number,
-    @Arg('title') title: string
+    @Arg('input') input: PostUpdateInput,
+    @Ctx() { request }: AppContext
   ): Promise<Post | null> {
-    const post = await Post.findOne({ where: { id } });
-    if (!post || !title) {
+    input.throwIfInvalid();
+    const { id, ...updates } = input;
+    const { userId } = request.session;
+
+    const post = await this.queryPosts({ userId })
+      .where('post.id = :id AND post.creatorId = :userId', { id, userId })
+      .getOne();
+
+    if (!post) {
       return post;
     }
 
-    await Post.update({ id }, { title });
+    Object.assign(post, { ...updates });
+    await Post.update({ id }, { ...updates });
 
     return post;
   }
@@ -102,32 +105,34 @@ export class PostResolver {
     @Ctx() { request }: AppContext
   ): Promise<PostListOutput> {
     input?.throwIfInvalid();
-    let { cursor, limit } = { ...input };
-    let query = Post
-      .createQueryBuilder('post');
+    let { cursor, limit = PostListInput.defaultLimit } = input ?? {};
+    const { userId } = request.session;
+    let query = await this.queryPosts({ userId })
 
     if (cursor) {
       query = query.where('post.createdAt < :cursor', { cursor: new Date(parseInt(cursor)) })
     }
 
-    limit = limit ?? PostListInput.defaultLimit;
-    const { userId } = request.session;
     const posts = await query
         .orderBy('post.createdAt', 'DESC')
         // try to get an extra to populate `hasMore`
         .take(limit + 1)
-        .leftJoinAndSelect(
-          'post.updoots',
-          'updoot',
-          'updoot.userId = :userId',
-          { userId }
-        )
-        .leftJoinAndSelect('post.creator', 'user')
         .getMany();
 
     return {
       hasMore: posts.length > limit,
       items: posts.slice(0, limit)
     };
+  }
+
+  protected queryPosts({ userId }: { userId: number | undefined; }): SelectQueryBuilder<Post> {
+    return Post.createQueryBuilder('post')
+      .leftJoinAndSelect(
+        'post.updoots',
+        'updoot',
+        'updoot.userId = :userId',
+        { userId }
+      )
+      .leftJoinAndSelect('post.creator', 'user');
   }
 }
