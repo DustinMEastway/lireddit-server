@@ -13,6 +13,7 @@ import { isAuthenticated } from '../middleware';
 import { AppContext } from '../types';
 import {
   PostCreateInput,
+  PostDeleteInput,
   PostInput,
   PostListInput,
   PostListOutput
@@ -36,9 +37,17 @@ export class PostResolver {
   @Mutation(() => Boolean)
   @UseMiddleware(isAuthenticated)
   async postDelete(
-    @Arg('id') id: number
+    @Arg('input') input: PostDeleteInput,
+    @Ctx() { request }: AppContext
   ): Promise<boolean> {
-    return ((await Post.delete({ id }))?.affected ?? 0) > 0;
+    input.throwIfInvalid();
+    const { id } = input;
+    const deleteResult = await Post.delete({
+      id,
+      creatorId: request.session.userId
+    });
+
+    return (deleteResult?.affected ?? 0) > 0;
   }
 
   @Query(() => Post, { nullable: true })

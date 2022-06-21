@@ -1,4 +1,5 @@
 export * from './post-create-input';
+export * from './post-delete-input';
 export * from './post-input';
 export * from './post-list-input';
 export * from './post-list-output';

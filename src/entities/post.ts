@@ -54,7 +54,8 @@ export class Post extends BaseEntity {
 
   @Field(() => String)
   textSnippet(): string {
-    return this.text.slice(0, this.text.indexOf('\n'));
+    const newLineI = this.text.indexOf('\n');
+    return (newLineI < 0) ? this.text : this.text.slice(0, newLineI);
   }
 
   @Field(() => Number)
