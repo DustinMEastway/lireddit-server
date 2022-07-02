@@ -14,7 +14,9 @@ import { User } from './user';
 @ObjectType()
 export class Updoot extends BaseEntity {
   @Field(() => Post)
-  @ManyToOne(() => Post, (post) => post.updoots)
+  @ManyToOne(() => Post, (post) => post.updoots, {
+    onDelete: 'CASCADE'
+  })
   post: Post;
 
   @Field()
