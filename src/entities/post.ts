@@ -1,4 +1,4 @@
-import { Ctx, Field, ObjectType } from 'type-graphql';
+import { Ctx, Field, ObjectType, Root } from 'type-graphql';
 import {
   BaseEntity,
   Column,
@@ -21,7 +21,6 @@ export class Post extends BaseEntity {
   @CreateDateColumn()
   createdAt: Date;
 
-  @Field()
   @ManyToOne(() => User, (user) => user.posts)
   creator: User;
 
@@ -52,6 +51,14 @@ export class Post extends BaseEntity {
   @Column({ type: 'int', default: 0 })
   votes!: number;
 
+  @Field(() => User, { name: 'creator' })
+  creatorField(
+    @Root() post: Post,
+    @Ctx() { dataLoaders: { userLoader } }: AppContext
+  ): Promise<User> {
+    return userLoader.load(post.creatorId);
+  }
+
   @Field(() => String)
   textSnippet(): string {
     const newLineI = this.text.indexOf('\n');
@@ -59,9 +66,18 @@ export class Post extends BaseEntity {
   }
 
   @Field(() => Number)
-  userVote(
-    @Ctx() { request }: AppContext
-  ): number {
-    return this.updoots?.find((u) => u.userId === request.session.userId)?.vote ?? 0;
+  async userVote(
+    @Root() post: Post,
+    @Ctx() { dataLoaders: { updootLoader }, request }: AppContext
+  ): Promise<number> {
+    const { userId } = request.session;
+    if (!userId) {
+      return 0;
+    }
+
+    return (await updootLoader.load({
+      postId: post.id,
+      userId: userId
+    }))?.vote ?? 0;
   }
 }

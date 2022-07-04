@@ -54,14 +54,12 @@ export class PostResolver {
 
   @Query(() => Post, { nullable: true })
   async post(
-    @Arg('input', () => PostInput) input: PostInput,
-    @Ctx() { request }: AppContext
+    @Arg('input', () => PostInput) input: PostInput
   ): Promise<Post | null> {
     input.throwIfInvalid();
     const { id } = input;
-    const { userId } = request.session;
 
-    const post = await this.queryPosts({ userId })
+    const post = await this.queryPosts()
       .where('post.id = :id', { id })
       .getOne();
 
@@ -85,7 +83,7 @@ export class PostResolver {
     const { id, ...updates } = input;
     const { userId } = request.session;
 
-    const post = await this.queryPosts({ userId })
+    const post = await this.queryPosts()
       .where('post.id = :id AND post.creatorId = :userId', { id, userId })
       .getOne();
 
@@ -101,13 +99,11 @@ export class PostResolver {
 
   @Query(() => PostListOutput)
   async postList(
-    @Arg('input', () => PostListInput, { nullable: true }) input: PostListInput | null,
-    @Ctx() { request }: AppContext
+    @Arg('input', () => PostListInput, { nullable: true }) input: PostListInput | null
   ): Promise<PostListOutput> {
     input?.throwIfInvalid();
     let { cursor, limit = PostListInput.defaultLimit } = input ?? {};
-    const { userId } = request.session;
-    let query = await this.queryPosts({ userId })
+    let query = await this.queryPosts();
 
     if (cursor) {
       query = query.where('post.createdAt < :cursor', { cursor: new Date(parseInt(cursor)) })
@@ -125,14 +121,9 @@ export class PostResolver {
     };
   }
 
-  protected queryPosts({ userId }: { userId: number | undefined; }): SelectQueryBuilder<Post> {
+  protected queryPosts(): SelectQueryBuilder<Post> {
     return Post.createQueryBuilder('post')
-      .leftJoinAndSelect(
-        'post.updoots',
-        'updoot',
-        'updoot.userId = :userId',
-        { userId }
-      )
-      .leftJoinAndSelect('post.creator', 'user');
+      // I am using dataloader to get creator as an example even though I prefer this way of getting the data
+      // .leftJoinAndSelect('post.creator', 'user');
   }
 }

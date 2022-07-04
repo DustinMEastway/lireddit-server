@@ -9,6 +9,10 @@ import { join as pathJoin } from 'path';
 import { buildSchema } from 'type-graphql';
 import { createConnection } from 'typeorm';
 
+import {
+  createUpdootDataLoader,
+  createUserDataLoader
+} from './data-loaders';
 import { entities } from './entities';
 import { environment } from './environments';
 import { resolvers } from './resolvers';
@@ -84,7 +88,13 @@ async function main(): Promise<void> {
   }));
   await addEntityManager();
   const redis = await addRedisSessionMiddleware(app);
-  await addGraphQlMiddleware(app, { redis });
+  await addGraphQlMiddleware(app, {
+    dataLoaders: {
+      updootLoader: createUpdootDataLoader(),
+      userLoader: createUserDataLoader()
+    },
+    redis
+  });
 
   app.listen(environment.port, (): void => {
     console.log(`Server listening on localhost:${environment.port}`);
